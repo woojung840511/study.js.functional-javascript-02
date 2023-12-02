@@ -35,11 +35,12 @@ const map = R.curry((f, container) => container.map(f));
 const chain = R.curry((f, container) => container.chain(f));
 const orElse = R.curry((f, container) => container.orElse(f));
 
+//  input에 입력된 검색어 읽는 함수 (라고 가정)
 const getSearchStr = () => 'hello monad';
 // document.querySelector('#searchInput').value;
 
-const validateSearchStr = R.curry((str) => {
-
+//  검색어 유효성 검사 (반환타입: Either)
+const safeGetValidatedStr = R.curry((str) => {
   // 유효성 검사 함수 목록을 정의한다.
   const validateFnList = [
     (str) => true ? Either.right(str) : Either.left('condition_1'),
@@ -47,47 +48,59 @@ const validateSearchStr = R.curry((str) => {
     (str) => true ? Either.right(str) : Either.left('condition_3'),
   ];
 
-  const failedList = [];
-  R.reduce((str, fn) => {
-    const validateResult = fn(str).
-        orElse(conditionName => conditionName + ' 가 유효하지 않습니다.');
-    const isFailed = !(validateResult instanceof Right);
-    if (isFailed) failedList.push(validateResult);
-  }, failedList, validateFnList);
+  // 유효성 검사 실행
+  const failedList = []; // 실패 항목이 담김
+  R.reduce(
+      (str, fn) => {
+        const validateResult =
+            fn(str).orElse(conditionName => conditionName + ' 가 유효하지 않습니다.');
+        const isFailed = !(validateResult instanceof Right);
+        if (isFailed) failedList.push(validateResult);
+      }
+      , failedList
+      , validateFnList,
+  );
 
-  return failedList.length === 0 ? Either.right(str) : Either.left(
-      new ValidationError(failedList));
+  return failedList.length === 0 ?
+      Either.right(str) :
+      Either.left(new ValidationError(failedList));
 });
 
-const safeGetData = R.curry((searchStr) => {
+//  검색어 등을 조회 조건으로 해서 api를 호출하고 결과를 반환 (반환타입: Promise -> Either 로 변환해서 반환)
+const getDataInPromise = (searchStr) => {
 
   let resultEither; // 반환 값 (Either)
 
-  // fetch가 성공했다고 가정할 경우
-  /*   const fetch = Promise.resolve({
-           totalCount: 10,
-           list: [
-             {a: 'a1', b: 'b1'},
-             {a: 'a2', b: 'b2'},
-             {a: 'a3', b: 'b3'},
-           ],
-         });*/
+  const fetch = new Promise((resolve, reject) => {
 
-  // fetch가 실패했다고 가정할 경우
-  const fetch = Promise.reject(new Error('api failed'));
+    // fetch가 성공했다고 가정할 경우
+    resolve({
+      totalCount: 10,
+      list: [
+        {a: 'a1', b: 'b1'},
+        {a: 'a2', b: 'b2'},
+        {a: 'a3', b: 'b3'},
+      ],
+    });
 
-  fetch
-  .then(data => {
-    console.log(data);
-    resultEither = Either.right(data)
+    // fetch가 실패했다고 가정할 경우
+    // reject(new Error('api failed'));
+
   })
-  .catch(error => {
-    console.log(error);
-    resultEither = Either.left(error)
-  });
 
+  // fetch 결과를 Either로 변환하기 --> 실퍠: then, catch 블록에 진입하지 않음.
+    fetch.then((value) => {
+      console.log(value);
+      resultEither = Either.right(value);
+    }).catch((err) => {
+      console.log(err);
+      resultEither = Either.left(err);
+    })
+
+    // return resultEither;
+  console.log(resultEither)
   return resultEither;
-});
+};
 
 const showList = (list) => {
   let html = '';
@@ -104,13 +117,14 @@ const showCount = (count) => {
 };
 
 const test = R.pipe(
-    getSearchStr,       //  검색어 읽기
-    validateSearchStr,  //  유효성 검사 (Either 를 반환함)
-    safeGetData,       //  api 요청 (Promise resolve 이면 Right, reject 이면 Left 반환)
-    map((data) => {   //  화면에 표시 (조회 결과 존재 유무에 따라 분기)
-      showList(data.list);
-      showCount(data.totalCount);
-    }),
+    getSearchStr,                   //  검색어 읽기
+    safeGetValidatedStr,            //  유효성 검사 (Either 를 반환함)
+    chain(getDataInPromise),        //  api 요청 (Promise resolve 이면 Right, reject 이면 Left 반환)
+    map(console.log),
+    // map((data) => {   //  화면에 표시 (조회 결과 존재 유무에 따라 분기)
+    //   showList(data.list);
+    //   showCount(data.totalCount);
+    // }),
     orElse((either) => {    // 실패 처리
       // console.log(either);
       if (either instanceof ValidationError) { // 유효성 실패했을 경우
