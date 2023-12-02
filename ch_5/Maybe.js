@@ -1,4 +1,4 @@
-export class Maybe {
+class Maybe {
   static just(a) {
     return new Just(a);
   }
@@ -24,7 +24,7 @@ export class Maybe {
   }
 }
 
-export class Just extends Maybe {
+class Just extends Maybe {
   constructor(value) {
     super();
     this._value = value;
@@ -51,7 +51,7 @@ export class Just extends Maybe {
   }
 }
 
-export class Nothing extends Maybe {
+class Nothing extends Maybe {
   map(f) {
     return this;
   }
@@ -76,3 +76,5 @@ export class Nothing extends Maybe {
     return 'Maybe.Nothing';
   }
 }
+
+module.exports = {Maybe, Nothing, Just}

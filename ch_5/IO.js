@@ -1,8 +1,8 @@
-import * as _ from 'node/util';
+const _ = require('lodash');
 
-export class IO {
+class IO {
   constructor(effect) {
-    if(!_.isFunction()) {
+    if(!_.isFunction(effect)) {
       throw 'IO 사용법 : 함수는 필수입니다.'; // 어떤 문법일까..
     }
     this.effect = effect;
@@ -29,3 +29,6 @@ export class IO {
     return this.effect(); // 모나드에 매핑된 모든 함수들이 실행된다. 느긋하게 초기화한 체인을 가동해서 IO 작업 시작
   }
 }
+
+module.exports = IO;
+

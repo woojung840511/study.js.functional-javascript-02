@@ -1,4 +1,4 @@
-export class Either {
+class Either {
   constructor(value) {
     this._value = value;
   }
@@ -24,7 +24,7 @@ export class Either {
   }
 }
 
-export class Left extends Either {
+class Left extends Either {
   map(_) { // 함수를 매핑하여 Right 값을 변환하는 메서드지만, Left는 변환할 값 자체가 없다. --> this._value는 있는데?!
     return this; // 쓰지 않음
   }
@@ -58,7 +58,7 @@ export class Left extends Either {
   }
 }
 
-export class Right extends Either {
+class Right extends Either {
   map(f) { // Right 만 함수 매핑해서 변환, Left 는 아무것도 하지 않음
     return Either.of(f(this._value));
   }
@@ -87,3 +87,5 @@ export class Right extends Either {
     return `Either.Right(${this._value})`;
   }
 }
+
+module.exports = {Either, Left, Right};
