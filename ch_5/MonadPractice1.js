@@ -42,51 +42,52 @@ const validateSearchStr = R.curry((str) => {
 
   // 유효성 검사 함수 목록을 정의한다.
   const validateFnList = [
-    (str) => false ? Either.right(str) : Either.left('condition_1'),
-    (str) => false ? Either.right(str) : Either.left('condition_2'),
+    (str) => true ? Either.right(str) : Either.left('condition_1'),
+    (str) => true ? Either.right(str) : Either.left('condition_2'),
     (str) => true ? Either.right(str) : Either.left('condition_3'),
   ];
 
   const failedList = [];
   R.reduce((str, fn) => {
-    const validateResult = fn(str).orElse(conditionName => conditionName + ' 가 유효하지 않습니다.');
+    const validateResult = fn(str).
+        orElse(conditionName => conditionName + ' 가 유효하지 않습니다.');
     const isFailed = !(validateResult instanceof Right);
-    if (isFailed) failedList.push(validateResult)
-  }, failedList, validateFnList)
+    if (isFailed) failedList.push(validateResult);
+  }, failedList, validateFnList);
 
-  return failedList.length === 0 ? Either.right(str) : Either.left(new ValidationError(failedList));
+  return failedList.length === 0 ? Either.right(str) : Either.left(
+      new ValidationError(failedList));
 });
 
-const getData = (searchStr) => {
+const safeGetData = R.curry((searchStr) => {
 
-  let responseBody;
-
-  const request = new Request('https://example.com', {
-    method: 'POST',
-    body: `{"searchStr": ${searchStr}`,
-  });
+  let resultEither; // 반환 값 (Either)
 
   // fetch가 성공했다고 가정할 경우
-  const resultPromise = Promise.resolve({
-    totalCount: 10,
-    list: [
-      {a: 'a1', b: 'b1'},
-      {a: 'a2', b: 'b2'},
-      {a: 'a3', b: 'b3'},
-    ],
-  });
+  /*   const fetch = Promise.resolve({
+           totalCount: 10,
+           list: [
+             {a: 'a1', b: 'b1'},
+             {a: 'a2', b: 'b2'},
+             {a: 'a3', b: 'b3'},
+           ],
+         });*/
 
-  // fetch가 실패했다고 가정할 경채
-  // const resultPromise = Promise.reject(new Error('api failed'));
+  // fetch가 실패했다고 가정할 경우
+  const fetch = Promise.reject(new Error('api failed'));
 
-  resultPromise
+  fetch
   .then(data => {
     console.log(data);
-    responseBody = data
+    resultEither = Either.right(data)
   })
-  .catch(error => responseBody = error.message); // 지연적으로 처리할 수 없을까
-  return responseBody;
-};
+  .catch(error => {
+    console.log(error);
+    resultEither = Either.left(error)
+  });
+
+  return resultEither;
+});
 
 const showList = (list) => {
   let html = '';
@@ -98,17 +99,24 @@ const showList = (list) => {
   console.log(html);
 };
 
+const showCount = (count) => {
+  console.log('count', count);
+};
+
 const test = R.pipe(
     getSearchStr,       //  검색어 읽기
     validateSearchStr,  //  유효성 검사 (Either 를 반환함)
-    // map(getData),       //  api 요청
-    // map((either) => {   //  화면에 표시
-    //   const data = either.value;
-    //   console.log(data);
-    // }),
+    safeGetData,       //  api 요청 (Promise resolve 이면 Right, reject 이면 Left 반환)
+    map((data) => {   //  화면에 표시 (조회 결과 존재 유무에 따라 분기)
+      showList(data.list);
+      showCount(data.totalCount);
+    }),
     orElse((either) => {    // 실패 처리
-      if (either instanceof ValidationError) {
+      // console.log(either);
+      if (either instanceof ValidationError) { // 유효성 실패했을 경우
         console.log(either.conditions.join('\n'));
+      } else { // api 요청이 실패한 경우
+        console.log('alert', either);
       }
     }),
 );
