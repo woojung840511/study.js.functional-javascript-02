@@ -72,7 +72,6 @@ const getDataInPromise = (searchStr) => {
   let resultEither; // 반환 값 (Either)
 
   const fetch = new Promise((resolve, reject) => {
-
     // fetch가 성공했다고 가정할 경우
     resolve({
       totalCount: 10,
@@ -85,14 +84,15 @@ const getDataInPromise = (searchStr) => {
 
     // fetch가 실패했다고 가정할 경우
     // reject(new Error('api failed'));
-
   })
 
   // fetch 결과를 Either로 변환하기 --> 실퍠: then, catch 블록에 진입하지 않음.
-    fetch.then((value) => {
+  fetch
+    .then((value) => {
       console.log(value);
       resultEither = Either.right(value);
-    }).catch((err) => {
+    })
+    .catch((err) => {
       console.log(err);
       resultEither = Either.left(err);
     })
